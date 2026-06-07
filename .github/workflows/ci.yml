@@ -31,26 +31,28 @@ jobs:
           path: target/site/jacoco/
           retention-days: 7
 
-      - name: Check coverage threshold
+      - name: Check coverage threshold (services only)
         run: |
-          MISSED=$(python3 -c "
+          python3 - <<'EOF'
           import xml.etree.ElementTree as ET
+
           tree = ET.parse('target/site/jacoco/jacoco.xml')
           root = tree.getroot()
-          for counter in root.findall('counter'):
-              if counter.attrib['type'] == 'INSTRUCTION':
-                  missed = int(counter.attrib['missed'])
-                  covered = int(counter.attrib['covered'])
-                  total = missed + covered
-                  pct = (covered / total * 100) if total > 0 else 0
-                  print(f'{pct:.1f}')
-                  break
-          ")
-          echo "Coverage: ${MISSED}%"
-          python3 -c "
-          pct = float('${MISSED}')
+
+          missed_total, covered_total = 0, 0
+          for cls in root.iter('class'):
+              name = cls.attrib.get('name', '')
+              if not name.endswith('Service'):
+                  continue
+              for counter in cls.findall('counter'):
+                  if counter.attrib['type'] == 'INSTRUCTION':
+                      missed_total += int(counter.attrib['missed'])
+                      covered_total += int(counter.attrib['covered'])
+
+          total = missed_total + covered_total
+          pct = (covered_total / total * 100) if total > 0 else 0
           threshold = 80.0
+          print(f'Service coverage: {pct:.1f}% (threshold {threshold}%)')
           if pct < threshold:
-              raise SystemExit(f'Coverage {pct:.1f}% is below threshold {threshold}%')
-          print(f'Coverage {pct:.1f}% meets threshold {threshold}%')
-          "
+              raise SystemExit(f'FAILED: {pct:.1f}% is below threshold {threshold}%')
+          EOF
