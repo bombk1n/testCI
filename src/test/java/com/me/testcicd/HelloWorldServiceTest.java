@@ -16,7 +16,7 @@ class HelloWorldServiceTest {
 
     @Test
     void greetReturnsHelloWorld() {
-        assertThat(service.greet()).isEqualTo("Hello, World!");
+        assertThat(service.greet()).isEqualTo("Hello World");
     }
 
     @Test
